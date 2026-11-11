@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RimbaWatch — Iklim & Karhutla Indonesia</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101713;
+      --panel: #18221c;
+      --panel-2: #202c24;
+      --line: #2b3a30;
+      --text: #edf3ee;
+      --muted: #9aab9e;
+      --green: #b7ef83;
+      --orange: #ff9a59;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    button, input, select, textarea { font: inherit; }
+    .shell { max-width: 1440px; margin: auto; padding: 24px; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 24px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: #29402d; font-size: 23px; }
+    h1 { margin: 0; font-size: 21px; letter-spacing: -.5px; }
+    .subtitle, .muted { color: var(--muted); font-size: 13px; }
+    .live { color: var(--green); border: 1px solid #3c573c; background: #1c2a20; border-radius: 99px; padding: 7px 12px; font-size: 12px; white-space: nowrap; }
+    .live::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--green); }
+    .intro { margin: 24px 0 18px; }
+    .intro h2 { margin: 0 0 5px; font-size: clamp(24px, 3vw, 34px); letter-spacing: -1px; }
+    .intro p { margin: 0; color: var(--muted); }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 20px 0; }
+    .stat, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; }
+    .stat { padding: 16px 18px; }
+    .stat-label { color: var(--muted); font-size: 12px; }
+    .stat-value { margin-top: 5px; font-size: 25px; font-weight: 700; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(310px, .85fr); gap: 16px; }
+    .map-card { overflow: hidden; }
+    .card-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 16px 18px; }
+    .card-heading h3, .form-title { margin: 0; font-size: 16px; }
+    .map-caption { color: var(--muted); font-size: 12px; }
+    #map { height: 520px; background: #26332c; }
+    .side { display: flex; flex-direction: column; gap: 16px; }
+    .weather { padding: 17px; }
+    .weather-top { display: flex; justify-content: space-between; align-items: center; }
+    .weather-top h3 { margin: 0; font-size: 16px; }
+    .weather-main { display: flex; justify-content: space-between; align-items: center; margin: 18px 0; }
+    .temperature { font-size: 38px; font-weight: 700; letter-spacing: -2px; }
+    .weather-icon { font-size: 34px; }
+    .weather-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .weather-item { padding: 10px; border-radius: 10px; background: var(--panel-2); }
+    .weather-item span { display: block; color: var(--muted); font-size: 11px; }
+    .weather-item strong { font-size: 14px; }
+    .form-card { padding: 17px; }
+    .form-title { margin-bottom: 14px; }
+    label { display: block; margin: 11px 0 5px; color: #cbd6ce; font-size: 12px; }
+    input, select, textarea {
+      width: 100%; color: var(--text); background: #111a14;
+      border: 1px solid var(--line); border-radius: 9px; padding: 10px 11px; outline: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: #83b960; }
+    textarea { min-height: 72px; resize: vertical; }
+    .coords { margin-top: 6px; color: var(--muted); font-size: 11px; }
+    .primary, .secondary {
+      border: 0; border-radius: 9px; padding: 10px 13px; cursor: pointer;
+    }
+    .primary { width: 100%; margin-top: 14px; background: var(--green); color: #172117; font-weight: 700; }
+    .secondary { background: var(--panel-2); color: var(--text); font-size: 12px; }
+    .reports { margin-top: 16px; padding: 16px 18px; }
+    .reports-head { display: flex; justify-content: space-between; align-items: center; }
+    .reports h3 { margin: 0; font-size: 15px; }
+    .report-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }
+    .report { padding: 12px; border: 1px solid var(--line); border-radius: 11px; background: #141d17; }
+    .report strong { display: block; }
+    .report small { color: var(--muted); }
+    .empty { grid-column: 1 / -1; padding: 14px; color: var(--muted); text-align: center; border: 1px dashed var(--line); border-radius: 10px; }
+    footer { padding: 18px 2px 4px; color: var(--muted); font-size: 11px; }
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #18221c; color: var(--text); }
+    @media (max-width: 850px) {
+      .layout { grid-template-columns: 1fr; }
+      #map { height: 430px; }
+    }
+    @media (max-width: 560px) {
+      .shell { padding: 16px; }
+      .stats { gap: 8px; }
+      .stat { padding: 12px; }
+      .stat-value { font-size: 21px; }
+      .report-list { grid-template-columns: 1fr; }
+      header { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">🌿</div>
+        <div>
+          <h1>RimbaWatch</h1>
+          <div class="subtitle">Pemantauan iklim & karhutla Indonesia</div>
+        </div>
+      </div>
+      <div class="live">Peta interaktif</div>
+    </header>
+
+    <section class="intro">
+      <h2>Jaga hutan, pantau perubahan.</h2>
+      <p>Lihat cuaca, jelajahi peta satelit, dan kirim laporan titik karhutla.</p>
+    </section>
+
+    <section class="stats" aria-label="Ringkasan laporan">
+      <div class="stat"><div class="stat-label">Laporan di sesi ini</div><div class="stat-value" id="reportCount">0</div></div>
+      <div class="stat"><div class="stat-label">Lokasi dipantau</div><div class="stat-value">Indonesia</div></div>
+      <div class="stat"><div class="stat-label">Sumber cuaca</div><div class="stat-value" style="font-size:18px">Open-Meteo</div></div>
+    </section>
+
+    <div class="layout">
+      <section class="card map-card">
+        <div class="card-heading">
+          <div>
+            <h3>Peta Indonesia</h3>
+            <div class="map-caption">Klik peta untuk memilih koordinat laporan</div>
+          </div>
+          <span class="map-caption">Citra satelit · Esri</span>
+        </div>
+        <div id="map" aria-label="Peta satelit Indonesia"></div>
+      </section>
+
+      <aside class="side">
+        <section class="card weather">
+          <div class="weather-top">
+            <h3>Cuaca lokasi terpilih</h3>
+            <button class="secondary" id="refreshWeather" type="button">Perbarui</button>
+          </div>
+          <div class="weather-main">
+            <div>
+              <div class="temperature" id="temperature">--°</div>
+              <div class="muted" id="weatherStatus">Memuat cuaca Jakarta…</div>
+            </div>
+            <div class="weather-icon" aria-hidden="true">🌤️</div>
+          </div>
+          <div class="weather-grid">
+            <div class="weather-item"><span>Kelembapan</span><strong id="humidity">--%</strong></div>
+            <div class="weather-item"><span>Angin</span><strong id="wind">-- km/jam</strong></div>
+            <div class="weather-item"><span>Curah hujan</span><strong id="rain">-- mm</strong></div>
+            <div class="weather-item"><span>Koordinat</span><strong id="weatherCoords">Jakarta</strong></div>
+          </div>
+        </section>
+
+        <section class="card form-card">
+          <h3 class="form-title">Kirim laporan karhutla</h3>
+          <form id="reportForm">
+            <label for="region">Wilayah / lokasi</label>
+            <input id="region" name="region" placeholder="Contoh: Kabupaten Kapuas" required maxlength="80">
+
+            <label for="severity">Perkiraan kondisi</label>
+            <select id="severity" name="severity">
+              <option>Asap terlihat</option>
+              <option>Api kecil</option>
+              <option>Api membesar</option>
+            </select>
+
+            <label for="description">Keterangan</label>
+            <textarea id="description" name="description" placeholder="Tambahkan informasi yang membantu…" maxlength="300"></textarea>
+            <div class="coords" id="selectedCoords">Koordinat: 0.0000, 117.0000 · klik peta untuk mengubah</div>
+            <button class="primary" type="submit">＋ Tambahkan laporan</button>
+          </form>
+        </section>
+      </aside>
+    </div>
+
+    <section class="card reports">
+      <div class="reports-head">
+        <h3>Laporan terbaru</h3>
+        <span class="map-caption">Tersimpan di browser ini</span>
+      </div>
+      <div class="report-list" id="reportList">
+        <div class="empty">Belum ada laporan. Gunakan formulir untuk menambahkan titik karhutla.</div>
+      </div>
+    </section>
+
+    <footer>
+      Peta dasar: Esri World Imagery · Cuaca: Open-Meteo. Laporan pada prototipe ini tidak dikirim ke server.
+      Gunakan kanal resmi dan verifikasi informasi sebelum mengambil tindakan.
+    </footer>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map("map").setView([-2.5, 118], 5);
+
+    L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      {
+        attribution: "Tiles &copy; Esri",
+        maxZoom: 18
+      }
+    ).addTo(map);
+
+    let selected = { lat: -2.5, lon: 118 };
+    const reports = [];
+    let selectionMarker = L.circleMarker([selected.lat, selected.lon], {
+      radius: 7, color: "#b7ef83", fillColor: "#b7ef83", fillOpacity: 0.9
+    }).addTo(map);
+
+    function setSelection(lat, lon) {
+      selected = { lat, lon };
+      selectionMarker.setLatLng([lat, lon]);
+      document.getElementById("selectedCoords").textContent =
+        `Koordinat: ${lat.toFixed(4)}, ${lon.toFixed(4)} · klik peta untuk mengubah`;
+      loadWeather(lat, lon);
+    }
+
+    map.on("click", event => setSelection(event.latlng.lat, event.latlng.lng));
+
+    async function loadWeather(lat, lon) {
+      const status = document.getElementById("weatherStatus");
+      status.textContent = "Memuat cuaca…";
+      document.getElementById("weatherCoords").textContent = `${lat.toFixed(2)}, ${lon.toFixed(2)}`;
+
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m&wind_speed_unit=kmh`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Gagal mengambil data cuaca");
+        const data = await response.json();
+        const current = data.current;
+
+        document.getElementById("temperature").textContent = `${Math.round(current.temperature_2m)}°`;
+        document.getElementById("humidity").textContent = `${current.relative_humidity_2m}%`;
+        document.getElementById("wind").textContent = `${Math.round(current.wind_speed_10m)} km/jam`;
+        document.getElementById("rain").textContent = `${current.precipitation} mm`;
+        status.textContent = "Data cuaca terkini";
+      } catch {
+        status.textContent = "Cuaca tidak dapat dimuat. Periksa koneksi internet.";
+      }
+    }
+
+    function renderReports() {
+      const list = document.getElementById("reportList");
+      list.replaceChildren();
+      document.getElementById("reportCount").textContent = reports.length;
+
+      if (reports.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "Belum ada laporan. Gunakan formulir untuk menambahkan titik karhutla.";
+        list.append(empty);
+        return;
+      }
+
+      reports.slice().reverse().forEach(report => {
+        const item = document.createElement("article");
+        item.className = "report";
+        const title = document.createElement("strong");
+        title.textContent = report.region;
+        const detail = document.createElement("small");
+        detail.textContent = `${report.severity} · ${report.lat.toFixed(4)}, ${report.lon.toFixed(4)}`;
+        item.append(title, detail);
+
+        if (report.description) {
+          const note = document.createElement("div");
+          note.className = "muted";
+          note.style.marginTop = "6px";
+          note.textContent = report.description;
+          item.append(note);
+        }
+        list.append(item);
+      });
+    }
+
+    document.getElementById("reportForm").addEventListener("submit", event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const report = {
+        region: form.elements.region.value.trim(),
+        severity: form.elements.severity.value,
+        description: form.elements.description.value.trim(),
+        lat: selected.lat,
+        lon: selected.lon
+      };
+
+      reports.push(report);
+      const marker = L.marker([report.lat, report.lon]).addTo(map);
+      const popup = document.createElement("div");
+      const heading = document.createElement("strong");
+      heading.textContent = report.region;
+      const text = document.createElement("div");
+      text.textContent = report.severity;
+      popup.append(heading, text);
+      if (report.description) {
+        const note = document.createElement("div");
+        note.textContent = report.description;
+        popup.append(note);
+      }
+      marker.bindPopup(popup);
+
+      renderReports();
+      form.reset();
+    });
+
+    document.getElementById("refreshWeather").addEventListener("click", () => {
+      loadWeather(selected.lat, selected.lon);
+    });
+
+    loadWeather(-6.2088, 106.8456);
+  </script>
+</body>
+</html>
+```
